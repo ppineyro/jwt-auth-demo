@@ -1,50 +1,76 @@
-import LogoutIcon from '@mui/icons-material/Logout'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
-import { useNavigate } from 'react-router-dom'
-import { ProjectForm } from '../components/ProjectForm'
-import { ProjectList } from '../components/ProjectList'
-import { useAuth } from '../hooks/useAuth'
-import { useProjectForm } from '../hooks/useProjectForm'
-import { useProjects } from '../hooks/useProjects'
+import { useState } from 'react';
+import { Container, Typography, Box, Button } from '@mui/material';
+import Grid from '@mui/material/Grid';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { Navbar } from '../components/Navbar';
+import { DashboardMetrics } from '../components/DashboardMetrics';
+import { ProjectForm } from '../components/ProjectForm';
+import { ProjectList } from '../components/ProjectList';
+import { TaskList } from '../components/TaskList';
+import { useProjects } from '../hooks/useProjects';
+import { useTasks } from '../hooks/useTasks';
+import { useProjectForm } from '../hooks/useProjectForm';
 
 export function DashboardPage() {
-  const { logout } = useAuth()
-  const navigate = useNavigate()
-  const { projects, loading, error, refetch } = useProjects()
-  const projectForm = useProjectForm({ onSuccess: refetch })
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { projects, loading, error } = useProjects();
+  const { tasks, filteredTasks, statusFilter, setStatusFilter, reloadTasks } = useTasks(selectedProjectId);
+  const projectForm = useProjectForm();
 
-  function handleLogout() {
-    logout()
-    navigate('/login')
-  }
+  const handleRefresh = () => {
+    reloadTasks();
+  };
+
+  const inProgress = tasks.filter((t) => t.status === 'EN_PROGRESO' || t.status === 'IN_PROGRESS').length;
+  const completed = tasks.filter((t) => t.status === 'COMPLETADA' || t.status === 'DONE').length;
 
   return (
-    <Box maxWidth={640} mx="auto" mt={6}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" gutterBottom>
-            Dashboard
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Fase 4 — formulario + lista conectados.
-          </Typography>
-        </Box>
-        <Button startIcon={<LogoutIcon />} onClick={handleLogout}>
-          Cerrar sesión
+    <Container maxWidth="lg" sx={{ py: 2 }}>
+      <Navbar />
+
+      <Typography variant="h4" align="center" sx={{ fontWeight: 'bold', my: 3 }}>
+        Tablero de Proyectos y Tareas
+      </Typography>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button startIcon={<RefreshIcon />} variant="outlined" size="small" onClick={handleRefresh}>
+          ACTUALIZAR
         </Button>
-      </Stack>
+      </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <ProjectForm {...projectForm} />
-      </Paper>
+      <DashboardMetrics
+        projectsCount={projects.length}
+        totalTasks={tasks.length}
+        inProgressTasks={inProgress}
+        completedTasks={completed}
+      />
 
-      <Paper sx={{ p: 3 }}>
-        <ProjectList projects={projects} loading={loading} error={error} />
-      </Paper>
-    </Box>
-  )
+      <Grid container spacing={3} sx={{ mt: 1 }}>
+        {/* Columna izquierda */}
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <ProjectForm {...projectForm} />
+            <ProjectList
+              projects={projects}
+              loading={loading}
+              error={error}
+              selectedProjectId={selectedProjectId}
+              onSelectProject={(id) =>
+                setSelectedProjectId(id === selectedProjectId ? null : id)
+              }
+            />
+          </Box>
+        </Grid>
+
+        {/* Columna derecha */}
+        <Grid size={{ xs: 12, md: 7 }}>
+          <TaskList
+            tasks={filteredTasks}
+            filter={statusFilter}
+            onFilterChange={setStatusFilter}
+          />
+        </Grid>
+      </Grid>
+    </Container>
+  );
 }

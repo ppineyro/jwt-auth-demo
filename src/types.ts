@@ -10,6 +10,16 @@ export interface Project {
   createdAt: string
 }
 
+export interface Task {
+  id: number;
+  title: string;
+  description: string;
+  status: 'POR_HACER' | 'EN_PROGRESO' | 'COMPLETADA' | 'TODO' | 'IN_PROGRESS' | 'DONE';
+  priority?: 'Alta' | 'Media' | 'Baja';
+  projectId: number;
+  dueDate?: string;
+}
+
 export interface NewProject {
   name: string
   description?: string
